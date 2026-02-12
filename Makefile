@@ -15,7 +15,7 @@ test:
 
 # Run linter on example file using standalone binary
 lint-example: build
-	./loglinter ./testdata/src/example/example.go || true
+	./loglinter ./testdata/src/example || true
 
 # Run golangci-lint on the project itself
 lint:

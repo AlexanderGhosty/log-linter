@@ -54,7 +54,7 @@ This linter is designed to work as a [Module Plugin](https://golangci-lint.run/p
 #### Step 1: Create a custom build configuration `.custom-gcl.yml`
 
 ```yaml
-version: v1.64.4 
+version: v2.8.0
 plugins:
   - module: 'github.com/AlexanderGhosty/log-linter'
     import: 'github.com/AlexanderGhosty/log-linter/plugin'

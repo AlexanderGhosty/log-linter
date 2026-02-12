@@ -23,9 +23,9 @@ func (r *Symbols) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	var cleanMsg []rune
 	hasBadChars := false
 
-	for _, r := range msg {
-		if isAllowed(r) {
-			cleanMsg = append(cleanMsg, r)
+	for _, ch := range msg {
+		if isAllowed(ch) {
+			cleanMsg = append(cleanMsg, ch)
 		} else {
 			hasBadChars = true
 		}
