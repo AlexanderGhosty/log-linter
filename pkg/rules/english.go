@@ -18,8 +18,8 @@ func (r *English) Name() string {
 }
 
 func (r *English) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
-	for _, r := range msg {
-		if unicode.IsLetter(r) && r > 127 {
+	for _, ch := range msg {
+		if unicode.IsLetter(ch) && ch > 127 {
 			return []analysis.Diagnostic{{
 				Pos:     pos,
 				End:     end,
