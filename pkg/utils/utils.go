@@ -43,12 +43,15 @@ func IsSupportedLogger(pkgPath, funcName string) bool {
 			return true
 		}
 	case "go.uber.org/zap":
-		// Check for Zap methods
-		if strings.HasSuffix(funcName, "f") || strings.HasSuffix(funcName, "w") {
-			return true
-		}
 		switch funcName {
+		// Logger methods
 		case "Info", "Warn", "Error", "Debug", "Panic", "Fatal", "DPanic":
+			return true
+		// SugaredLogger printf-style methods
+		case "Infof", "Warnf", "Errorf", "Debugf", "Panicf", "Fatalf", "DPanicf":
+			return true
+		// SugaredLogger key-value methods
+		case "Infow", "Warnw", "Errorw", "Debugw", "Panicw", "Fatalw", "DPanicw":
 			return true
 		}
 	}
@@ -79,4 +82,31 @@ func GetMessageIndex(pkgPath, funcName string) int {
 	}
 	// Default to 0 (slog.Info/Warn/Error/Debug, zap.*)
 	return 0
+}
+
+// IsFieldConstructor returns true if the given package path and function name
+// correspond to a known structured logging field constructor (e.g. slog.String, zap.String).
+func IsFieldConstructor(pkgPath, funcName string) bool {
+	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
+		pkgPath = pkgPath[i+len("/vendor/"):]
+	}
+
+	switch pkgPath {
+	case "log/slog":
+		switch funcName {
+		case "String", "Int", "Int64", "Float64", "Bool", "Time", "Duration", "Any", "Group", "Attr":
+			return true
+		}
+	case "go.uber.org/zap":
+		switch funcName {
+		case "String", "Int", "Int64", "Float64", "Bool", "Time", "Duration", "Any",
+			"Binary", "ByteString", "Error", "NamedError", "Stringer",
+			"Strings", "Ints", "Float64s", "Bools", "Times", "Durations",
+			"Object", "Array", "Reflect", "Namespace", "Stack",
+			"Int8", "Int16", "Int32", "Uint", "Uint8", "Uint16", "Uint32", "Uint64",
+			"Float32", "Complex64", "Complex128", "Uintptr":
+			return true
+		}
+	}
+	return false
 }

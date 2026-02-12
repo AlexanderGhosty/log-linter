@@ -51,7 +51,7 @@ func SensitiveRule() {
 	slog.Info("token: " + token)            // want "log message may contain sensitive data" "variable name suggests sensitive data"
 
 	// Slog structured attributes
-	slog.Info("login", "password", password)           // want "log attribute contains sensitive data"
+	slog.Info("login", "password", password)           // want "log attribute contains sensitive data" "variable name suggests sensitive data"
 	slog.Info("login", slog.String("token", "secret")) // want "log field key may contain sensitive data"
 
 	// Zap fields
@@ -61,6 +61,9 @@ func SensitiveRule() {
 	// Correct examples (no diagnostic)
 	slog.Info("user authenticated successfully") // OK
 	slog.Debug("api request completed")          // OK
+
+	// Direct variable usage (should be flagged)
+	slog.Info(password) // want "variable name suggests sensitive data"
 }
 
 func ContextFuncs() {
