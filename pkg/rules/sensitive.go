@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/constant"
 	"go/token"
+	"strconv"
 	"strings"
 
 	"github.com/AlexanderGhosty/log-linter/pkg/utils"
@@ -72,7 +73,10 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 
 		// 1. Check if argument is a string literal (direct key in slog, or value)
 		if basicLit, ok := arg.(*ast.BasicLit); ok && basicLit.Kind == token.STRING {
-			val := strings.Trim(basicLit.Value, "\"")
+			val, err := strconv.Unquote(basicLit.Value)
+			if err != nil {
+				continue
+			}
 			if r.containsSensitiveInfo(val) {
 				report(basicLit.Pos(), basicLit.End(), "log attribute contains sensitive data")
 			}
@@ -80,11 +84,10 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 
 		// 2. Check for attribute constructors (slog.String("key", ...), zap.String("key", ...))
 		if callExpr, ok := arg.(*ast.CallExpr); ok {
-			// Resolve the function being called
-			fun := callExpr.Fun
-			if _, ok := fun.(*ast.SelectorExpr); ok {
-				// We expect something like slog.String, zap.String, etc.
-				// The first argument is usually the key.
+			// Resolve the function being called and verify it's a known field constructor
+			constructorPkg, constructorFunc, resolved := utils.ResolveCallPackagePath(pass, callExpr)
+			if resolved && utils.IsFieldConstructor(constructorPkg, constructorFunc) {
+				// The first argument is the key.
 				if len(callExpr.Args) > 0 {
 					firstArg := callExpr.Args[0]
 
@@ -110,6 +113,11 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 				checkOperand(binExpr.Y, r, report)
 			}
 		}
+
+		// 4. Check for direct variable usage (Ident)
+		if ident, ok := arg.(*ast.Ident); ok {
+			checkOperand(ident, r, report)
+		}
 	}
 
 	return diags
@@ -124,8 +132,8 @@ func checkOperand(expr ast.Expr, r *Sensitive, report func(token.Pos, token.Pos,
 	}
 	// Check string literal parts of concatenation for sensitive keywords
 	if basicLit, ok := expr.(*ast.BasicLit); ok && basicLit.Kind == token.STRING {
-		val := strings.Trim(basicLit.Value, "\"")
-		if r.containsSensitiveInfo(val) {
+		val, err := strconv.Unquote(basicLit.Value)
+		if err == nil && r.containsSensitiveInfo(val) {
 			report(basicLit.Pos(), basicLit.End(), "log message may contain sensitive data")
 		}
 	}
