@@ -52,59 +52,41 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 		})
 	}
 
-	// Determine message index to skip it (it is checked by Check method)
+	// Determine message index to skip it (it is checked by Check method if constant)
 	pkgPath, funcName, ok := utils.ResolveCallPackagePath(pass, call)
 	msgIndex := -1
 	if ok {
 		msgIndex = utils.GetMessageIndex(pkgPath, funcName)
 	}
 
-	for i, arg := range call.Args {
-		if i == msgIndex {
-			// If the message argument is a constant string, it's checked by Rule.Check.
-			// Skip it here to avoid duplicates.
-			// If it's not constant (e.g. concatenation), Rule.Check won't run,
-			// so we MUST check it here.
+	// Check the message argument itself if it's NOT a constant string (concatenation etc.)
+	// If it IS a constant string, the basic Check method handles it.
+	if msgIndex >= 0 && msgIndex < len(call.Args) {
+		targetArg := call.Args[msgIndex]
+		tv, ok := pass.TypesInfo.Types[targetArg]
+		if !ok || tv.Value == nil || tv.Value.Kind() != constant.String {
+			checkOperand(targetArg, r, report, "log message may contain sensitive data")
+		}
+	}
+
+	utils.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
+		if isKey {
+			// Check if key is a constant string
 			tv, ok := pass.TypesInfo.Types[arg]
 			if ok && tv.Value != nil && tv.Value.Kind() == constant.String {
-				continue
-			}
-		}
-
-		// 1. Check for attribute constructors (slog.String("key", ...), zap.String("key", ...))
-		if callExpr, ok := arg.(*ast.CallExpr); ok {
-			// Resolve the function being called and verify it's a known field constructor
-			constructorPkg, constructorFunc, resolved := utils.ResolveCallPackagePath(pass, callExpr)
-			if resolved && utils.IsFieldConstructor(constructorPkg, constructorFunc) {
-				// The first argument is the key.
-				if len(callExpr.Args) > 0 {
-					firstArg := callExpr.Args[0]
-
-					// Check if first arg is constant string
-					tv, ok := pass.TypesInfo.Types[firstArg]
-					if ok && tv.Value != nil && tv.Value.Kind() == constant.String {
-						val := constant.StringVal(tv.Value)
-						if r.containsSensitiveInfo(val) {
-							report(firstArg.Pos(), firstArg.End(), "log field key may contain sensitive data")
-						}
-					}
-
-					// Check values (subsequent arguments)
-					for _, arg := range callExpr.Args[1:] {
-						checkOperand(arg, r, report, "log attribute contains sensitive data")
-					}
+				val := constant.StringVal(tv.Value)
+				if r.containsSensitiveInfo(val) {
+					report(arg.Pos(), arg.End(), "log field key may contain sensitive data")
 				}
-				continue
+			} else {
+				// Key is not a constant string, analyze the expression
+				checkOperand(arg, r, report, "log attribute contains sensitive data")
 			}
+		} else {
+			// Value - check recursively
+			checkOperand(arg, r, report, "log attribute contains sensitive data")
 		}
-
-		// 2. Check all other argument types (BasicLit, Ident, SelectorExpr, BinaryExpr, etc.)
-		msg := "log attribute contains sensitive data"
-		if i == msgIndex {
-			msg = "log message may contain sensitive data"
-		}
-		checkOperand(arg, r, report, msg)
-	}
+	})
 
 	return diags
 }
