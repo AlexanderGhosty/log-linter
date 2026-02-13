@@ -7,7 +7,6 @@ type Config struct {
 
 type SensitiveConfig struct {
 	Keywords []string `mapstructure:"keywords"`
-	Ignore   []string `mapstructure:"ignore"`
 }
 
 type SymbolsConfig struct {
