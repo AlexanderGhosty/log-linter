@@ -21,8 +21,9 @@ func (r *English) Name() string {
 }
 
 func (r *English) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
+	const maxASCII = 127
 	for _, ch := range msg {
-		if unicode.IsLetter(ch) && ch > 127 {
+		if unicode.IsLetter(ch) && ch > maxASCII {
 			return []analysis.Diagnostic{{
 				Pos:     pos,
 				End:     end,
