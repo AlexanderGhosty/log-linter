@@ -17,9 +17,9 @@ test:
 lint-example: build
 	./loglinter ./testdata/src/example || true
 
-# Run golangci-lint on the project itself
-lint:
-	golangci-lint run
+# Run golangci-lint on the project itself (using custom binary with plugin)
+lint: build-custom-gcl
+	./custom-gcl run
 
 clean:
 	rm -f loglinter custom-gcl
