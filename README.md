@@ -58,7 +58,7 @@ version: v2.8.0
 plugins:
   - module: 'github.com/AlexanderGhosty/log-linter'
     import: 'github.com/AlexanderGhosty/log-linter/plugin'
-    version: v0.0.0-latest # or specific version/commit
+    version: v0.1.0 # example tag; replace with a specific version or commit
     path: . # If using local source, or omit for remote module
 ```
 
@@ -85,6 +85,47 @@ linters-settings:
 linters:
   enable:
     - loglinter
+```
+
+### 3. Auto-fixing Issues
+
+The linter supports auto-fixing for:
+
+- Capitalized log messages (converts to lowercase)
+- Special characters in messages (removes them)
+
+To apply fixes automatically, run:
+
+```bash
+golangci-lint run --fix
+```
+
+### 4. Configuration
+
+You can configure the linter settings in your `.golangci.yml` under `linters-settings.custom.loglinter.settings`.
+
+#### Available Settings
+
+- **`sensitive.keywords`**: List of words to treat as sensitive; when set, this replaces the built-in default keywords (
+  e.g., "ssn", "credit_card").
+- **`sensitive.patterns`**: List of regex patterns to treat as sensitive (e.g., `^\d{3}-\d{2}-\d{4}$`).
+- **`symbols.allowed`**: String containing additional characters to allow in log messages (e.g., "@#").
+
+#### Example Configuration
+
+```yaml
+linters-settings:
+   custom:
+      loglinter:
+         path: ./custom-gcl
+         description: Check log messages for style guide compliance
+         original-url: github.com/AlexanderGhosty/log-linter
+         settings:
+            sensitive:
+               keywords: [ "ssn", "card_number", "auth_code" ]
+               patterns: [ "\\d{3}-\\d{2}-\\d{4}" ] # SSN regex example
+            symbols:
+               allowed: "@#"
 ```
 
 ## Supported Loggers

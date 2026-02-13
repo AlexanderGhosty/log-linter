@@ -2,6 +2,8 @@
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
 # Binaries for programs and plugins
+loglinter
+custom-gcl
 *.exe
 *.exe~
 *.dll
@@ -28,8 +30,7 @@ go.work.sum
 .env
 
 # Editor/IDE
-<<<<<<< HEAD
- .idea/
+.idea/
 =======
 # .idea/
 >>>>>>> 8d20e2b494482b80fe03f7efa3aeb6105d7a016b

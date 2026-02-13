@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/constant"
 	"go/token"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -13,15 +14,40 @@ import (
 
 type Sensitive struct {
 	keywords []string
+	patterns []*regexp.Regexp
 }
 
-func NewSensitive() Rule {
-	return &Sensitive{
-		keywords: []string{
+func NewSensitive(keywords []string, patterns []string) Rule {
+	if len(keywords) == 0 {
+		keywords = []string{
 			"password", "passwd", "secret", "token",
 			"api_key", "apikey", "access_key", "auth_token",
 			"credential", "private_key",
-		},
+		}
+	}
+	normalized := make([]string, 0, len(keywords))
+	for _, kw := range keywords {
+		kw = strings.ToLower(strings.TrimSpace(kw))
+		if kw == "" {
+			continue
+		}
+		normalized = append(normalized, kw)
+	}
+
+	compiledPatterns := make([]*regexp.Regexp, 0, len(patterns))
+	for _, p := range patterns {
+		if p == "" {
+			continue
+		}
+		// Patterns are expected to be pre-validated by config.Validate().
+		// If an invalid pattern reaches here, it's a configuration/initialization error.
+		re := regexp.MustCompile(p)
+		compiledPatterns = append(compiledPatterns, re)
+	}
+
+	return &Sensitive{
+		keywords: normalized,
+		patterns: compiledPatterns,
 	}
 }
 
@@ -134,9 +160,17 @@ func checkOperand(expr ast.Expr, r *Sensitive, report func(token.Pos, token.Pos,
 }
 
 func (r *Sensitive) containsSensitiveInfo(s string) bool {
-	s = strings.ToLower(s)
+	// Check regex patterns first (on original string)
+	for _, re := range r.patterns {
+		if re.MatchString(s) {
+			return true
+		}
+	}
+
+	// Check keywords (case-insensitive)
+	sLower := strings.ToLower(s)
 	for _, kw := range r.keywords {
-		if strings.Contains(s, kw) {
+		if strings.Contains(sLower, kw) {
 			return true
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"go/constant"
 	"go/token"
 
+	"github.com/AlexanderGhosty/log-linter/pkg/config"
 	"github.com/AlexanderGhosty/log-linter/pkg/rules"
 	"github.com/AlexanderGhosty/log-linter/pkg/utils"
 	"golang.org/x/tools/go/analysis"
@@ -12,22 +13,29 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 )
 
-var Analyzer = &analysis.Analyzer{
-	Name:     "loglinter",
-	Doc:      "checks log messages for common style issues",
-	Run:      run,
-	Requires: []*analysis.Analyzer{inspect.Analyzer},
+func New(cfg *config.Config) *analysis.Analyzer {
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
+
+	registeredRules := []rules.Rule{
+		rules.NewLowercase(),
+		rules.NewEnglish(),
+		rules.NewSymbols(cfg.Symbols.Allowed),
+		rules.NewSensitive(cfg.Sensitive.Keywords, cfg.Sensitive.Patterns),
+	}
+
+	return &analysis.Analyzer{
+		Name: "loglinter",
+		Doc:  "checks log messages for common style issues",
+		Run: func(pass *analysis.Pass) (interface{}, error) {
+			return run(pass, registeredRules)
+		},
+		Requires: []*analysis.Analyzer{inspect.Analyzer},
+	}
 }
 
-// registeredRules is the list of rules applied to each log call.
-var registeredRules = []rules.Rule{
-	rules.NewLowercase(),
-	rules.NewEnglish(),
-	rules.NewSymbols(),
-	rules.NewSensitive(),
-}
-
-func run(pass *analysis.Pass) (interface{}, error) {
+func run(pass *analysis.Pass, registeredRules []rules.Rule) (interface{}, error) {
 	inspectAnalyzer := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
 	nodeFilter := []ast.Node{
