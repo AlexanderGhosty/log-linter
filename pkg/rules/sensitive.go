@@ -23,8 +23,16 @@ func NewSensitive(keywords []string) Rule {
 			"credential", "private_key",
 		}
 	}
+	normalized := make([]string, 0, len(keywords))
+	for _, kw := range keywords {
+		kw = strings.ToLower(strings.TrimSpace(kw))
+		if kw == "" {
+			continue
+		}
+		normalized = append(normalized, kw)
+	}
 	return &Sensitive{
-		keywords: keywords,
+		keywords: normalized,
 	}
 }
 
