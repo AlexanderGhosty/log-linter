@@ -110,3 +110,53 @@ func IsFieldConstructor(pkgPath, funcName string) bool {
 	}
 	return false
 }
+
+// InspectLogArgs iterates over the arguments of a log call and invokes `fn` for each key and value.
+// It handles:
+// 1. Structured attribute constructors (e.g., slog.String("key", "val")) - callback for "key" and "val".
+// 2. Key-value pairs in SugaredLogger/slog (e.g., "key", "val") - callback for "key" and "val".
+//
+// msgIndex: the index of the message argument. Args check starts after this index.
+func InspectLogArgs(pass *analysis.Pass, call *ast.CallExpr, msgIndex int, fn func(arg ast.Expr, isKey bool)) {
+	pkgPath, funcName, ok := ResolveCallPackagePath(pass, call)
+	if !ok {
+		return
+	}
+
+	for i, arg := range call.Args {
+		if i <= msgIndex {
+			continue
+		}
+
+		// 1. Check for attribute constructors (slog.String("key", ...), zap.String("key", ...))
+		if callExpr, ok := arg.(*ast.CallExpr); ok {
+			constructorPkg, constructorFunc, resolved := ResolveCallPackagePath(pass, callExpr)
+			if resolved && IsFieldConstructor(constructorPkg, constructorFunc) {
+				// The first argument is the key.
+				if len(callExpr.Args) > 0 {
+					fn(callExpr.Args[0], true) // It is a key
+					// Subsequent arguments are values
+					for _, valArg := range callExpr.Args[1:] {
+						fn(valArg, false) // It is a value
+					}
+				}
+				continue
+			}
+		}
+
+		// 2. Check for key-value pairs in SugaredLogger AND slog functions
+		// slog.Info("msg", "key", "value") -> "key" is at index 1 (msg at 0)
+		// zap.Infow("msg", "key", "value") -> "key" is at index 1
+		isSlog := strings.Contains(pkgPath, "log/slog")
+		isZapSugared := strings.HasSuffix(funcName, "w")
+
+		if isSlog || isZapSugared {
+			// Args after msgIndex are keys and values (mostly).
+			// (i - msgIndex) starts at 1.
+			// 1 -> key, 2 -> value, 3 -> key, 4 -> value...
+			relativeIndex := i - msgIndex
+			isKey := relativeIndex%2 == 1
+			fn(arg, isKey)
+		}
+	}
+}
