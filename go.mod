@@ -10,6 +10,7 @@ require (
 
 require (
 	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/mod v0.24.0 // indirect

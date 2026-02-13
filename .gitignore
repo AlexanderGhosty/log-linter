@@ -28,8 +28,7 @@ go.work.sum
 .env
 
 # Editor/IDE
-<<<<<<< HEAD
- .idea/
+.idea/
 =======
 # .idea/
 >>>>>>> 8d20e2b494482b80fe03f7efa3aeb6105d7a016b

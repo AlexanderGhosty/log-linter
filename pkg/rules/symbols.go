@@ -12,10 +12,14 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-type Symbols struct{}
+type Symbols struct {
+	allowed string
+}
 
-func NewSymbols() Rule {
-	return &Symbols{}
+func NewSymbols(allowed string) Rule {
+	return &Symbols{
+		allowed: allowed,
+	}
 }
 
 func (r *Symbols) Name() string {
@@ -27,7 +31,7 @@ func (r *Symbols) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	hasBadChars := false
 
 	for _, ch := range msg {
-		if isAllowed(ch) {
+		if r.isAllowed(ch) {
 			cleanMsg = append(cleanMsg, ch)
 		} else {
 			hasBadChars = true
@@ -81,11 +85,19 @@ func (r *Symbols) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysis.
 	return diags
 }
 
-func isAllowed(r rune) bool {
-	if unicode.IsLetter(r) || unicode.IsDigit(r) || r == ' ' {
+func (r *Symbols) isAllowed(ch rune) bool {
+	if unicode.IsLetter(ch) || unicode.IsDigit(ch) || ch == ' ' {
 		return true
 	}
-	switch r {
+
+	// Check configured allowed chars
+	for _, allowedCh := range r.allowed {
+		if ch == allowedCh {
+			return true
+		}
+	}
+
+	switch ch {
 	case '.', ',', '-', '_', ':', '/', '=', '%', '(', ')', '\'':
 		return true
 	}

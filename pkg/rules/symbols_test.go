@@ -6,14 +6,14 @@ import (
 )
 
 func TestSymbols_Name(t *testing.T) {
-	r := NewSymbols()
+	r := NewSymbols("")
 	if r.Name() != "symbols" {
 		t.Errorf("expected name 'symbols', got %q", r.Name())
 	}
 }
 
 func TestSymbols_Check(t *testing.T) {
-	r := NewSymbols()
+	r := NewSymbols("")
 
 	tests := []struct {
 		name     string
@@ -57,7 +57,7 @@ func TestSymbols_Check(t *testing.T) {
 }
 
 func TestSymbols_SuggestedFix(t *testing.T) {
-	r := NewSymbols()
+	r := NewSymbols("")
 	diags := r.Check("hello!🚀", token.NoPos, token.NoPos)
 
 	if len(diags) == 0 {

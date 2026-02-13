@@ -15,13 +15,16 @@ type Sensitive struct {
 	keywords []string
 }
 
-func NewSensitive() Rule {
-	return &Sensitive{
-		keywords: []string{
+func NewSensitive(keywords []string) Rule {
+	if len(keywords) == 0 {
+		keywords = []string{
 			"password", "passwd", "secret", "token",
 			"api_key", "apikey", "access_key", "auth_token",
 			"credential", "private_key",
-		},
+		}
+	}
+	return &Sensitive{
+		keywords: keywords,
 	}
 }
 

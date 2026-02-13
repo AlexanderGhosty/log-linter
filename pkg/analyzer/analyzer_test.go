@@ -15,5 +15,5 @@ func TestAnalyzer(t *testing.T) {
 	testdata, _ := filepath.Abs("../../testdata")
 
 	// Running tests on package "example" inside testdata/src/example
-	analysistest.Run(t, testdata, analyzer.Analyzer, "example")
+	analysistest.Run(t, testdata, analyzer.New(nil), "example")
 }

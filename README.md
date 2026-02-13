@@ -58,7 +58,7 @@ version: v2.8.0
 plugins:
   - module: 'github.com/AlexanderGhosty/log-linter'
     import: 'github.com/AlexanderGhosty/log-linter/plugin'
-    version: v0.0.0-latest # or specific version/commit
+    version: v0.1.0 # example tag; replace with a specific version or commit
     path: . # If using local source, or omit for remote module
 ```
 
