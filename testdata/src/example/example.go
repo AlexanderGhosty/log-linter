@@ -106,3 +106,18 @@ func StructuredKeys() {
 		zap.String("key!", "value"), // want "log message should not contain special characters or emoji"
 	)
 }
+
+func AdvancedSensitivePatterns() {
+	password := "secret123"
+	data := map[string]string{"password": "secret"}
+
+	// Index expressions (e.g. data["password"])
+	slog.Info("value", "key", data["password"]) // want "sensitive data"
+
+	// Pointer dereferences (e.g. *password)
+	secretPtr := &password
+	slog.Info("value", "key", *secretPtr) // want "sensitive data"
+
+	// Parenthesized expressions
+	slog.Info("value", "key", (password)) // want "sensitive data"
+}

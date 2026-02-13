@@ -12,9 +12,7 @@ type Rule interface {
 	// Name returns a unique identifier for the rule (e.g. "lowercase").
 	Name() string
 
-	// Check validates the log message content and returns diagnostics if violated.
-	// msg: the constant string value extracted from the log call.
-	// pos, end: the source position range of the string literal.
+	// Check validates the log message and returns diagnostics if violated.
 	Check(msg string, pos, end token.Pos) []analysis.Diagnostic
 }
 

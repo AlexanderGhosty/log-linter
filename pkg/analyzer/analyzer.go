@@ -37,22 +37,18 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspectAnalyzer.Preorder(nodeFilter, func(n ast.Node) {
 		call := n.(*ast.CallExpr)
 
-		// 1. Resolve package path and function name
 		pkgPath, funcName, ok := utils.ResolveCallPackagePath(pass, call)
 		if !ok {
 			return
 		}
 
-		// 2. Filter supported loggers
 		if !utils.IsSupportedLogger(pkgPath, funcName) {
 			return
 		}
 
-		// 3. Extract message
-		msgArgIndex := utils.GetMessageIndex(pkgPath, funcName)
+		msgArgIndex := utils.MessageIndex(pkgPath, funcName)
 		msg, pos, end, found := extractLogMessage(pass, call, msgArgIndex)
 
-		// 4. Apply rules
 		for _, rule := range registeredRules {
 			// Basic string rules
 			if found {
