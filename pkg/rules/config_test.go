@@ -38,9 +38,16 @@ func TestSymbols_Config(t *testing.T) {
 		msg      string
 		wantDiag bool
 	}{
+		// Custom allowed symbols
 		{name: "allowed @", msg: "user@host", wantDiag: false},
 		{name: "allowed #", msg: "issue #1", wantDiag: false},
 		{name: "disallowed !", msg: "error!", wantDiag: true},
+		// Default allowed symbols should still work
+		{name: "default period", msg: "done.", wantDiag: false},
+		{name: "default hyphen", msg: "re-try", wantDiag: false},
+		{name: "default underscore", msg: "user_id", wantDiag: false},
+		{name: "default colon", msg: "key: value", wantDiag: false},
+		{name: "default slash", msg: "/api/v1", wantDiag: false},
 	}
 
 	for _, tt := range tests {

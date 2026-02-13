@@ -87,6 +87,44 @@ linters:
     - loglinter
 ```
 
+### 3. Auto-fixing Issues
+
+The linter supports auto-fixing for:
+
+- Capitalized log messages (converts to lowercase)
+- Special characters in messages (removes them)
+
+To apply fixes automatically, run:
+
+```bash
+golangci-lint run --fix
+```
+
+### 4. Configuration
+
+You can configure the linter settings in your `.golangci.yml` under `linters-settings.custom.loglinter.settings`.
+
+#### Available Settings
+
+- **`sensitive.keywords`**: List of additional words to treat as sensitive (e.g., "ssn", "credit_card").
+- **`symbols.allowed`**: String containing additional characters to allow in log messages (e.g., "@#").
+
+#### Example Configuration
+
+```yaml
+linters-settings:
+   custom:
+      loglinter:
+         path: ./custom-gcl
+         description: Check log messages for style guide compliance
+         original-url: github.com/AlexanderGhosty/log-linter
+         settings:
+            sensitive:
+               keywords: [ "ssn", "card_number", "auth_code" ]
+            symbols:
+               allowed: "@#"
+```
+
 ## Supported Loggers
 
 - `log/slog`: `Info`, `Warn`, `Error`, `Debug`, `Log`, `LogAttrs`, and `*Context` variants.
