@@ -46,27 +46,63 @@ func SensitiveRule() {
 	token := "xyz"
 
 	// Task examples (Rule 4) — concatenation with sensitive data
-	slog.Info("user password: " + password) // want "log message may contain sensitive data" "variable name suggests sensitive data"
-	slog.Debug("api_key=" + apiKey)         // want "log message may contain sensitive data" "variable name suggests sensitive data"
-	slog.Info("token: " + token)            // want "log message may contain sensitive data" "variable name suggests sensitive data"
+	slog.Info("user password: " + password) // want "sensitive data" "sensitive data"
+	slog.Debug("api_key=" + apiKey)         // want "sensitive data" "sensitive data"
+	slog.Info("token: " + token)            // want "sensitive data" "sensitive data"
 
 	// Slog structured attributes
-	slog.Info("login", "password", password)           // want "log attribute contains sensitive data" "variable name suggests sensitive data"
-	slog.Info("login", slog.String("token", "secret")) // want "log field key may contain sensitive data"
+	slog.Info("login", "password", password)           // want "sensitive data" "sensitive data"
+	slog.Info("login", slog.String("token", "secret")) // want "sensitive data" "sensitive data"
 
 	// Zap fields
 	logger := zap.NewExample()
-	logger.Info("login", zap.String("password", "secret")) // want "log field key may contain sensitive data"
+	logger.Info("login", zap.String("password", "secret")) // want "sensitive data" "sensitive data"
 
 	// Correct examples (no diagnostic)
 	slog.Info("user authenticated successfully") // OK
 	slog.Debug("api request completed")          // OK
 
 	// Direct variable usage (should be flagged)
-	slog.Info(password) // want "variable name suggests sensitive data"
+	slog.Info(password) // want "sensitive data"
+
+	// Struct field access
+	type User struct {
+		Password string
+		Token    string
+	}
+	u := User{}
+	slog.Info("logging user", "pass", u.Password)             // want "sensitive data"
+	slog.Info("logging value", slog.String("token", u.Token)) // want "sensitive data" "sensitive data"
+
+	// Sensitive values in constructors
+	slog.Info("config", slog.String("key", "my_secret_token"))  // want "sensitive data"
+	logger.Info("config", zap.String("key", "my_secret_token")) // want "sensitive data"
 }
 
 func ContextFuncs() {
 	ctx := context.Background()
 	slog.InfoContext(ctx, "Starting context func") // want "log message should start with a lowercase letter"
+}
+
+func StructuredKeys() {
+	// Structured logging (slog)
+	slog.Info("server started", "key", "value")
+	slog.Info("server started", "ключ", "value") // want "log message should be in English"
+	slog.Info("server started", "key!", "value") // want "log message should not contain special characters or emoji"
+
+	// Structured logging (zap)
+	logger := zap.NewExample()
+	sugar := zap.S()
+
+	sugar.Infow("server started",
+		"key", "value",
+		"ключ", "value", // want "log message should be in English"
+		"key!", "value", // want "log message should not contain special characters or emoji"
+	)
+
+	logger.Info("server started",
+		zap.String("key", "value"),
+		zap.String("ключ", "value"), // want "log message should be in English"
+		zap.String("key!", "value"), // want "log message should not contain special characters or emoji"
+	)
 }

@@ -71,18 +71,7 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 			}
 		}
 
-		// 1. Check if argument is a string literal (direct key in slog, or value)
-		if basicLit, ok := arg.(*ast.BasicLit); ok && basicLit.Kind == token.STRING {
-			val, err := strconv.Unquote(basicLit.Value)
-			if err != nil {
-				continue
-			}
-			if r.containsSensitiveInfo(val) {
-				report(basicLit.Pos(), basicLit.End(), "log attribute contains sensitive data")
-			}
-		}
-
-		// 2. Check for attribute constructors (slog.String("key", ...), zap.String("key", ...))
+		// 1. Check for attribute constructors (slog.String("key", ...), zap.String("key", ...))
 		if callExpr, ok := arg.(*ast.CallExpr); ok {
 			// Resolve the function being called and verify it's a known field constructor
 			constructorPkg, constructorFunc, resolved := utils.ResolveCallPackagePath(pass, callExpr)
@@ -99,48 +88,53 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 							report(firstArg.Pos(), firstArg.End(), "log field key may contain sensitive data")
 						}
 					}
+
+					// Check values (subsequent arguments)
+					for _, arg := range callExpr.Args[1:] {
+						checkOperand(arg, r, report, "log attribute contains sensitive data")
+					}
 				}
+				continue
 			}
 		}
 
-		// 3. Check for concatenation (BinaryExpr)
-		// e.g. log.Info("pass=" + password)
-		// Even if this is NOT the message argument (unlikely for slog/zap to use concat in other args, but possible),
-		// we should check it.
-		if binExpr, ok := arg.(*ast.BinaryExpr); ok {
-			if binExpr.Op == token.ADD {
-				checkOperand(binExpr.X, r, report)
-				checkOperand(binExpr.Y, r, report)
-			}
+		// 2. Check all other argument types (BasicLit, Ident, SelectorExpr, BinaryExpr, etc.)
+		msg := "log attribute contains sensitive data"
+		if i == msgIndex {
+			msg = "log message may contain sensitive data"
 		}
-
-		// 4. Check for direct variable usage (Ident)
-		if ident, ok := arg.(*ast.Ident); ok {
-			checkOperand(ident, r, report)
-		}
+		checkOperand(arg, r, report, msg)
 	}
 
 	return diags
 }
 
-func checkOperand(expr ast.Expr, r *Sensitive, report func(token.Pos, token.Pos, string)) {
+func checkOperand(expr ast.Expr, r *Sensitive, report func(token.Pos, token.Pos, string), stringLiteralMsg string) {
 	// Check variable names for sensitive keywords
 	if ident, ok := expr.(*ast.Ident); ok {
 		if r.containsSensitiveInfo(ident.Name) {
 			report(ident.Pos(), ident.End(), "variable name suggests sensitive data")
 		}
 	}
+	// Check struct fields/selectors (e.g. user.Password)
+	if sel, ok := expr.(*ast.SelectorExpr); ok {
+		if r.containsSensitiveInfo(sel.Sel.Name) {
+			report(sel.Pos(), sel.End(), "field name suggests sensitive data")
+		}
+		// Optionally verify the X expression too (e.g. secretStruct.Field)
+		checkOperand(sel.X, r, report, stringLiteralMsg)
+	}
 	// Check string literal parts of concatenation for sensitive keywords
 	if basicLit, ok := expr.(*ast.BasicLit); ok && basicLit.Kind == token.STRING {
 		val, err := strconv.Unquote(basicLit.Value)
 		if err == nil && r.containsSensitiveInfo(val) {
-			report(basicLit.Pos(), basicLit.End(), "log message may contain sensitive data")
+			report(basicLit.Pos(), basicLit.End(), stringLiteralMsg)
 		}
 	}
 	// Recurse for nested binary expressions (e.g. a + b + c)
 	if binExpr, ok := expr.(*ast.BinaryExpr); ok && binExpr.Op == token.ADD {
-		checkOperand(binExpr.X, r, report)
-		checkOperand(binExpr.Y, r, report)
+		checkOperand(binExpr.X, r, report, stringLiteralMsg)
+		checkOperand(binExpr.Y, r, report, stringLiteralMsg)
 	}
 }
 
