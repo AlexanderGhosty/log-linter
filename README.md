@@ -108,6 +108,7 @@ You can configure the linter settings in your `.golangci.yml` under `linters-set
 
 - **`sensitive.keywords`**: List of words to treat as sensitive; when set, this replaces the built-in default keywords (
   e.g., "ssn", "credit_card").
+- **`sensitive.patterns`**: List of regex patterns to treat as sensitive (e.g., `^\d{3}-\d{2}-\d{4}$`).
 - **`symbols.allowed`**: String containing additional characters to allow in log messages (e.g., "@#").
 
 #### Example Configuration
@@ -122,6 +123,7 @@ linters-settings:
          settings:
             sensitive:
                keywords: [ "ssn", "card_number", "auth_code" ]
+               patterns: [ "\\d{3}-\\d{2}-\\d{4}" ] # SSN regex example
             symbols:
                allowed: "@#"
 ```

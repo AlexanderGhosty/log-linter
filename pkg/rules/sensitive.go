@@ -39,9 +39,10 @@ func NewSensitive(keywords []string, patterns []string) Rule {
 		if p == "" {
 			continue
 		}
-		if re, err := regexp.Compile(p); err == nil {
-			compiledPatterns = append(compiledPatterns, re)
-		}
+		// Patterns are expected to be pre-validated by config.Validate().
+		// If an invalid pattern reaches here, it's a configuration/initialization error.
+		re := regexp.MustCompile(p)
+		compiledPatterns = append(compiledPatterns, re)
 	}
 
 	return &Sensitive{
