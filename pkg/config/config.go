@@ -19,11 +19,8 @@ func (c *Config) Validate() error {
 
 type SensitiveConfig struct {
 	Keywords []string `mapstructure:"keywords"`
-<<<<<<< HEAD
-=======
 	Patterns []string `mapstructure:"patterns"`
 	Ignore   []string `mapstructure:"ignore"`
->>>>>>> 2f570fa (feat: enhance sensitive configuration with custom patterns and validation)
 }
 
 func (c *SensitiveConfig) Validate() error {
