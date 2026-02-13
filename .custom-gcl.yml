@@ -1,0 +1,9 @@
+# Configuration for building a custom golangci-lint binary with the log-linter plugin.
+# See https://golangci-lint.run/plugins/module-plugins/
+
+version: v2.8.0
+plugins:
+  # Load plugin from local source
+  - module: 'github.com/AlexanderGhosty/log-linter'
+    import: 'github.com/AlexanderGhosty/log-linter/plugin'
+    path: .

@@ -1,0 +1,25 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    # Custom plugin configuration (commented out until built)
+    - loglinter
+  settings:
+    govet:
+      enable-all: true
+    custom:
+      # This section configures the custom linter when using module plugins
+        loglinter:
+          type: module
+          description: "Checks log messages for style compliance"
+          original-url: "github.com/AlexanderGhosty/log-linter"

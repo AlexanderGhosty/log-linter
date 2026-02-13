@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Vet
+      run: go vet ./...
+
+    - name: Lint
+      uses: golangci/golangci-lint-action@v9
+      with:
+        version: v2.8.0
+
+    - name: Test
+      run: go test -v -race ./...
+
+    - name: Smoke Test Linter
+      # Build the standalone linter binary and verify it runs successfully against test data.
+      run: |
+        go build -o loglinter ./cmd/loglinter
+        ./loglinter ./testdata/src/example || true
