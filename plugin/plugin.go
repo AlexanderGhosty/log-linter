@@ -18,6 +18,9 @@ func New(conf any) (register.LinterPlugin, error) {
 	if err := mapstructure.Decode(conf, &cfg); err != nil {
 		return nil, err
 	}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
 	return &Plugin{cfg: cfg}, nil
 }
 

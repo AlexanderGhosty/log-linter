@@ -22,7 +22,7 @@ func New(cfg *config.Config) *analysis.Analyzer {
 		rules.NewLowercase(),
 		rules.NewEnglish(),
 		rules.NewSymbols(cfg.Symbols.Allowed),
-		rules.NewSensitive(cfg.Sensitive.Keywords),
+		rules.NewSensitive(cfg.Sensitive.Keywords, cfg.Sensitive.Patterns),
 	}
 
 	return &analysis.Analyzer{

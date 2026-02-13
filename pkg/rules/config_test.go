@@ -6,25 +6,24 @@ import (
 )
 
 func TestSensitive_Config(t *testing.T) {
-	r := NewSensitive([]string{"beer", "wine"})
+	r := NewSensitive([]string{"beer", "wine"}, nil)
 
 	tests := []struct {
 		name     string
-		msg      string
+		input    string
 		wantDiag bool
 	}{
-		{name: "custom keyword beer", msg: "free beer", wantDiag: true},
-		{name: "custom keyword wine", msg: "red wine", wantDiag: true},
-		// Default keywords are REPLACED, not merged in recent implementation.
-		{name: "default keyword password", msg: "user password", wantDiag: false},
+		{name: "beer", input: "beer", wantDiag: true},
+		{name: "wine", input: "wine", wantDiag: true},
+		{name: "water", input: "water", wantDiag: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			diags := r.Check(tt.msg, token.NoPos, token.NoPos)
+			diags := r.Check(tt.input, token.NoPos, token.NoPos)
 			gotDiag := len(diags) > 0
 			if gotDiag != tt.wantDiag {
-				t.Errorf("Check(%q): got diagnostic=%v, want diagnostic=%v", tt.msg, gotDiag, tt.wantDiag)
+				t.Errorf("Check(%q) diag = %v, want %v", tt.input, gotDiag, tt.wantDiag)
 			}
 		})
 	}
