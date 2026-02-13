@@ -56,7 +56,7 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 	pkgPath, funcName, ok := utils.ResolveCallPackagePath(pass, call)
 	msgIndex := -1
 	if ok {
-		msgIndex = utils.GetMessageIndex(pkgPath, funcName)
+		msgIndex = utils.MessageIndex(pkgPath, funcName)
 	}
 
 	// Check the message argument itself if it's NOT a constant string (concatenation etc.)
@@ -117,6 +117,19 @@ func checkOperand(expr ast.Expr, r *Sensitive, report func(token.Pos, token.Pos,
 	if binExpr, ok := expr.(*ast.BinaryExpr); ok && binExpr.Op == token.ADD {
 		checkOperand(binExpr.X, r, report, stringLiteralMsg)
 		checkOperand(binExpr.Y, r, report, stringLiteralMsg)
+	}
+	// Check map/slice index expressions (e.g. data["password"])
+	if indexExpr, ok := expr.(*ast.IndexExpr); ok {
+		checkOperand(indexExpr.Index, r, report, stringLiteralMsg)
+		checkOperand(indexExpr.X, r, report, stringLiteralMsg)
+	}
+	// Check pointer dereferences (e.g. *password)
+	if starExpr, ok := expr.(*ast.StarExpr); ok {
+		checkOperand(starExpr.X, r, report, stringLiteralMsg)
+	}
+	// Check parenthesized expressions (e.g. (password))
+	if parenExpr, ok := expr.(*ast.ParenExpr); ok {
+		checkOperand(parenExpr.X, r, report, stringLiteralMsg)
 	}
 }
 

@@ -112,7 +112,7 @@ func TestIsFieldConstructor(t *testing.T) {
 	}
 }
 
-func TestGetMessageIndex(t *testing.T) {
+func TestMessageIndex(t *testing.T) {
 	tests := []struct {
 		name     string
 		pkgPath  string
@@ -142,9 +142,9 @@ func TestGetMessageIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GetMessageIndex(tt.pkgPath, tt.funcName)
+			got := MessageIndex(tt.pkgPath, tt.funcName)
 			if got != tt.want {
-				t.Errorf("GetMessageIndex(%q, %q) = %v, want %v", tt.pkgPath, tt.funcName, got, tt.want)
+				t.Errorf("MessageIndex(%q, %q) = %v, want %v", tt.pkgPath, tt.funcName, got, tt.want)
 			}
 		})
 	}

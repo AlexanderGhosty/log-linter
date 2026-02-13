@@ -41,7 +41,7 @@ func (r *English) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysis.
 	pkgPath, funcName, ok := utils.ResolveCallPackagePath(pass, call)
 	msgIndex := -1
 	if ok {
-		msgIndex = utils.GetMessageIndex(pkgPath, funcName)
+		msgIndex = utils.MessageIndex(pkgPath, funcName)
 	}
 
 	utils.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
