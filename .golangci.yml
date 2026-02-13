@@ -17,11 +17,9 @@ linters:
   settings:
     govet:
       enable-all: true
-
-linters-settings:
-  custom:
-    # This section configures the custom linter when using module plugins
-      loglinter:
-        type: module
-        description: "Checks log messages for style compliance"
-        original-url: "github.com/AlexanderGhosty/log-linter"
+    custom:
+      # This section configures the custom linter when using module plugins
+        loglinter:
+          type: module
+          description: "Checks log messages for style compliance"
+          original-url: "github.com/AlexanderGhosty/log-linter"
