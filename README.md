@@ -110,6 +110,7 @@ You can configure the linter settings in your `.golangci.yml` under `linters-set
   e.g., "ssn", "credit_card").
 - **`sensitive.patterns`**: List of regex patterns to treat as sensitive (e.g., `^\d{3}-\d{2}-\d{4}$`).
 - **`symbols.allowed`**: String containing additional characters to allow in log messages (e.g., "@#").
+- **`loggers`**: List of custom logger definitions to support wrappers or other libraries.
 
 #### Example Configuration
 
@@ -126,6 +127,11 @@ linters-settings:
                patterns: [ "\\d{3}-\\d{2}-\\d{4}" ] # SSN regex example
             symbols:
                allowed: "@#"
+            loggers:
+               - package: "github.com/my/custom/log"
+                 user_type: "slog" # "slog" or "zap"
+                 message_index: 0
+                 field_constructors: [ "String", "Int" ]
 ```
 
 ## Supported Loggers
