@@ -1,0 +1,194 @@
+package logsupport
+
+import (
+	"go/ast"
+	"strings"
+
+	"github.com/AlexanderGhosty/log-linter/pkg/config"
+	"github.com/AlexanderGhosty/log-linter/pkg/utils"
+	"golang.org/x/tools/go/analysis"
+)
+
+// Registry holds the configuration for supported loggers.
+type Registry struct {
+	configs []config.LoggerConfig
+}
+
+// NewRegistry creates a new Registry with the given matching configurations.
+func NewRegistry(customConfigs []config.LoggerConfig) *Registry {
+	// Start with defaults
+	defaults := []config.LoggerConfig{
+		{
+			Package:      "log/slog",
+			UserType:     "slog",
+			MessageIndex: 0,
+			FieldConstructors: []string{
+				"String", "Int", "Int64", "Float64", "Bool", "Time", "Duration", "Any", "Group", "Attr",
+			},
+		},
+		{
+			Package:      "go.uber.org/zap",
+			UserType:     "zap",
+			MessageIndex: 0,
+			FieldConstructors: []string{
+				"String", "Int", "Int64", "Float64", "Bool", "Time", "Duration", "Any",
+				"Binary", "ByteString", "Error", "NamedError", "Stringer",
+				"Strings", "Ints", "Float64s", "Bools", "Times", "Durations",
+				"Object", "Array", "Reflect", "Namespace", "Stack",
+				"Int8", "Int16", "Int32", "Uint", "Uint8", "Uint16", "Uint32", "Uint64",
+				"Float32", "Complex64", "Complex128", "Uintptr",
+			},
+		},
+	}
+
+	return &Registry{
+		configs: append(defaults, customConfigs...),
+	}
+}
+
+// IsSupportedLogger returns true if the package and function correspond to a supported logger.
+func (r *Registry) IsSupportedLogger(pkgPath, funcName string) bool {
+	// Remove vendor prefix for matching
+	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
+		pkgPath = pkgPath[i+len("/vendor/"):]
+	}
+
+	for _, cfg := range r.configs {
+		if cfg.Package == pkgPath {
+			if cfg.UserType == "slog" {
+				switch funcName {
+				case "Info", "Warn", "Error", "Debug", "Log":
+					return true
+				case "InfoContext", "WarnContext", "ErrorContext", "DebugContext", "LogAttrs":
+					return true
+				}
+			} else if cfg.UserType == "zap" {
+				switch funcName {
+				// Logger methods
+				case "Info", "Warn", "Error", "Debug", "Panic", "Fatal", "DPanic":
+					return true
+				// SugaredLogger printf-style methods
+				case "Infof", "Warnf", "Errorf", "Debugf", "Panicf", "Fatalf", "DPanicf":
+					return true
+				// SugaredLogger key-value methods
+				case "Infow", "Warnw", "Errorw", "Debugw", "Panicw", "Fatalw", "DPanicw":
+					return true
+				}
+			} else {
+				// For generic loggers, we might need more specific configuration
+				// For now, assume if the package matches, it's supported
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// MessageIndex returns the index of the log message argument.
+func (r *Registry) MessageIndex(pkgPath, funcName string) int {
+	cleanPkgPath := pkgPath
+	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
+		cleanPkgPath = pkgPath[i+len("/vendor/"):]
+	}
+
+	for _, cfg := range r.configs {
+		if cfg.Package == cleanPkgPath {
+			if cfg.UserType == "slog" {
+				switch funcName {
+				case "Log", "LogAttrs":
+					return 2
+				default:
+					if strings.HasSuffix(funcName, "Context") {
+						return 1
+					}
+				}
+				return 0
+			}
+			return cfg.MessageIndex
+		}
+	}
+	return 0
+}
+
+// IsFieldConstructor returns true if the function is a field constructor.
+func (r *Registry) IsFieldConstructor(pkgPath, funcName string) bool {
+	cleanPkgPath := pkgPath
+	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
+		cleanPkgPath = pkgPath[i+len("/vendor/"):]
+	}
+
+	for _, cfg := range r.configs {
+		if cfg.Package == cleanPkgPath {
+			for _, fc := range cfg.FieldConstructors {
+				if fc == funcName {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// InspectLogArgs iterates over the arguments of a log call.
+func (r *Registry) InspectLogArgs(pass *analysis.Pass, call *ast.CallExpr, msgIndex int, fn func(arg ast.Expr, isKey bool)) {
+	pkgPath, funcName, ok := utils.ResolveCallPackagePath(pass, call)
+	if !ok {
+		return
+	}
+
+	// Determine UserType
+	cleanPkgPath := pkgPath
+	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
+		cleanPkgPath = pkgPath[i+len("/vendor/"):]
+	}
+
+	var userType string
+	for _, cfg := range r.configs {
+		if cfg.Package == cleanPkgPath {
+			userType = cfg.UserType
+			break
+		}
+	}
+
+	// DEBUG PRINT
+	// fmt.Printf("InspectLogArgs: pkg=%s func=%s userType=%s msgIndex=%d args=%d\n", cleanPkgPath, funcName, userType, msgIndex, len(call.Args))
+
+	for i, arg := range call.Args {
+		if i <= msgIndex {
+			continue
+		}
+
+		// Check for nested field constructors
+		if callExpr, ok := arg.(*ast.CallExpr); ok {
+			constructorPkg, constructorFunc, resolved := utils.ResolveCallPackagePath(pass, callExpr)
+			if resolved {
+				// fmt.Printf("  Arg %d is call: %s.%s\n", i, constructorPkg, constructorFunc)
+				if r.IsFieldConstructor(constructorPkg, constructorFunc) {
+					// fmt.Println("    -> IsFieldConstructor")
+					if len(callExpr.Args) > 0 {
+						// The first arg is the key
+						fn(callExpr.Args[0], true)
+						// Subsequent args are values
+						for _, valArg := range callExpr.Args[1:] {
+							fn(valArg, false)
+						}
+					}
+					continue
+				}
+			}
+		}
+
+		// Handle key-value pairs
+		isSlog := userType == "slog"
+		// For zap, only "w" suffixed methods are key-value pairs (sugared)
+		isZapSugared := userType == "zap" && strings.HasSuffix(funcName, "w")
+
+		if isSlog || isZapSugared {
+			relativeIndex := i - msgIndex
+			// In key-value pairs, even indices (0, 2, ...) relative to start are keys
+			isKey := relativeIndex%2 == 1
+			// fmt.Printf("  Arg %d: relativeIndex=%d isKey=%v\n", i, relativeIndex, isKey)
+			fn(arg, isKey)
+		}
+	}
+}

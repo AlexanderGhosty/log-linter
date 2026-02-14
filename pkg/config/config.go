@@ -8,6 +8,7 @@ import (
 type Config struct {
 	Symbols   SymbolsConfig   `mapstructure:"symbols"`
 	Sensitive SensitiveConfig `mapstructure:"sensitive"`
+	Loggers   []LoggerConfig  `mapstructure:"loggers"`
 }
 
 func (c *Config) Validate() error {
@@ -33,4 +34,15 @@ func (c *SensitiveConfig) Validate() error {
 
 type SymbolsConfig struct {
 	Allowed string `mapstructure:"allowed"`
+}
+
+type LoggerConfig struct {
+	// Package path of the logger (e.g. "log/slog", "go.uber.org/zap")
+	Package string `mapstructure:"package"`
+	// Implementation type: "slog", "zap", "generic"
+	UserType string `mapstructure:"user_type"`
+	// Index of the message argument in the log call
+	MessageIndex int `mapstructure:"message_index"`
+	// Names of field constructors (e.g. "String", "Int")
+	FieldConstructors []string `mapstructure:"field_constructors"`
 }

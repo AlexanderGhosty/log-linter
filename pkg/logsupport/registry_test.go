@@ -1,8 +1,13 @@
-package utils
+package logsupport
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestIsSupportedLogger(t *testing.T) {
+	// Use default registry
+	r := NewRegistry(nil)
+
 	tests := []struct {
 		name     string
 		pkgPath  string
@@ -54,7 +59,7 @@ func TestIsSupportedLogger(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := IsSupportedLogger(tt.pkgPath, tt.funcName)
+			got := r.IsSupportedLogger(tt.pkgPath, tt.funcName)
 			if got != tt.want {
 				t.Errorf("IsSupportedLogger(%q, %q) = %v, want %v", tt.pkgPath, tt.funcName, got, tt.want)
 			}
@@ -63,6 +68,8 @@ func TestIsSupportedLogger(t *testing.T) {
 }
 
 func TestIsFieldConstructor(t *testing.T) {
+	r := NewRegistry(nil)
+
 	tests := []struct {
 		name     string
 		pkgPath  string
@@ -104,7 +111,7 @@ func TestIsFieldConstructor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := IsFieldConstructor(tt.pkgPath, tt.funcName)
+			got := r.IsFieldConstructor(tt.pkgPath, tt.funcName)
 			if got != tt.want {
 				t.Errorf("IsFieldConstructor(%q, %q) = %v, want %v", tt.pkgPath, tt.funcName, got, tt.want)
 			}
@@ -113,6 +120,8 @@ func TestIsFieldConstructor(t *testing.T) {
 }
 
 func TestMessageIndex(t *testing.T) {
+	r := NewRegistry(nil)
+
 	tests := []struct {
 		name     string
 		pkgPath  string
@@ -142,7 +151,7 @@ func TestMessageIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := MessageIndex(tt.pkgPath, tt.funcName)
+			got := r.MessageIndex(tt.pkgPath, tt.funcName)
 			if got != tt.want {
 				t.Errorf("MessageIndex(%q, %q) = %v, want %v", tt.pkgPath, tt.funcName, got, tt.want)
 			}

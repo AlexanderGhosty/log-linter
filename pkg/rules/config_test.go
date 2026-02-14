@@ -6,7 +6,7 @@ import (
 )
 
 func TestSensitive_Config(t *testing.T) {
-	r := NewSensitive([]string{"beer", "wine"}, nil)
+	r := NewSensitive(nil, []string{"beer", "wine"}, nil)
 
 	tests := []struct {
 		name     string
@@ -30,7 +30,7 @@ func TestSensitive_Config(t *testing.T) {
 }
 
 func TestSymbols_Config(t *testing.T) {
-	r := NewSymbols("@#")
+	r := NewSymbols(nil, "@#")
 
 	tests := []struct {
 		name     string

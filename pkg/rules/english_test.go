@@ -6,14 +6,14 @@ import (
 )
 
 func TestEnglish_Name(t *testing.T) {
-	r := NewEnglish()
+	r := NewEnglish(nil)
 	if r.Name() != "english" {
 		t.Errorf("expected name 'english', got %q", r.Name())
 	}
 }
 
 func TestEnglish_Check(t *testing.T) {
-	r := NewEnglish()
+	r := NewEnglish(nil)
 
 	tests := []struct {
 		name     string

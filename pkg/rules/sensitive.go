@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AlexanderGhosty/log-linter/pkg/logsupport"
 	"github.com/AlexanderGhosty/log-linter/pkg/utils"
 	"golang.org/x/tools/go/analysis"
 )
@@ -15,9 +16,10 @@ import (
 type Sensitive struct {
 	keywords []string
 	patterns []*regexp.Regexp
+	registry *logsupport.Registry
 }
 
-func NewSensitive(keywords []string, patterns []string) Rule {
+func NewSensitive(registry *logsupport.Registry, keywords []string, patterns []string) Rule {
 	if len(keywords) == 0 {
 		keywords = []string{
 			"password", "passwd", "secret", "token",
@@ -48,6 +50,7 @@ func NewSensitive(keywords []string, patterns []string) Rule {
 	return &Sensitive{
 		keywords: normalized,
 		patterns: compiledPatterns,
+		registry: registry,
 	}
 }
 
@@ -82,7 +85,7 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 	pkgPath, funcName, ok := utils.ResolveCallPackagePath(pass, call)
 	msgIndex := -1
 	if ok {
-		msgIndex = utils.MessageIndex(pkgPath, funcName)
+		msgIndex = r.registry.MessageIndex(pkgPath, funcName)
 	}
 
 	// Check the message argument itself if it's NOT a constant string (concatenation etc.)
@@ -95,7 +98,7 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 		}
 	}
 
-	utils.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
+	r.registry.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
 		if isKey {
 			// Check if key is a constant string
 			tv, ok := pass.TypesInfo.Types[arg]

@@ -6,14 +6,19 @@ import (
 	"go/token"
 	"unicode"
 
+	"github.com/AlexanderGhosty/log-linter/pkg/logsupport"
 	"github.com/AlexanderGhosty/log-linter/pkg/utils"
 	"golang.org/x/tools/go/analysis"
 )
 
-type English struct{}
+type English struct {
+	registry *logsupport.Registry
+}
 
-func NewEnglish() Rule {
-	return &English{}
+func NewEnglish(registry *logsupport.Registry) Rule {
+	return &English{
+		registry: registry,
+	}
 }
 
 func (r *English) Name() string {
@@ -41,10 +46,10 @@ func (r *English) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysis.
 	pkgPath, funcName, ok := utils.ResolveCallPackagePath(pass, call)
 	msgIndex := -1
 	if ok {
-		msgIndex = utils.MessageIndex(pkgPath, funcName)
+		msgIndex = r.registry.MessageIndex(pkgPath, funcName)
 	}
 
-	utils.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
+	r.registry.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
 		if isKey {
 			// Check if arg is a constant string
 			tv, ok := pass.TypesInfo.Types[arg]

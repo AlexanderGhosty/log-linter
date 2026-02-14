@@ -39,3 +39,20 @@ func TestAnalyzer_Config(t *testing.T) {
 
 	analysistest.Run(t, testdata, analyzer.New(cfg), "configcheck")
 }
+
+func TestAnalyzer_CustomLogger(t *testing.T) {
+	testdata, err := filepath.Abs("../../testdata")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		Loggers: []config.LoggerConfig{{
+			Package:      "custom",
+			UserType:     "generic",
+			MessageIndex: 0,
+		}},
+	}
+
+	analysistest.Run(t, testdata, analyzer.New(cfg), "custom")
+}

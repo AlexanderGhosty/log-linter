@@ -6,14 +6,14 @@ import (
 )
 
 func TestSensitive_Name(t *testing.T) {
-	r := NewSensitive(nil, nil)
+	r := NewSensitive(nil, nil, nil)
 	if r.Name() != "sensitive" {
 		t.Errorf("expected name 'sensitive', got %q", r.Name())
 	}
 }
 
 func TestSensitive_Check(t *testing.T) {
-	r := NewSensitive(nil, nil)
+	r := NewSensitive(nil, nil, nil)
 
 	tests := []struct {
 		name     string

@@ -8,17 +8,20 @@ import (
 	"strconv"
 	"unicode"
 
+	"github.com/AlexanderGhosty/log-linter/pkg/logsupport"
 	"github.com/AlexanderGhosty/log-linter/pkg/utils"
 	"golang.org/x/tools/go/analysis"
 )
 
 type Symbols struct {
-	allowed string
+	allowed  string
+	registry *logsupport.Registry
 }
 
-func NewSymbols(allowed string) Rule {
+func NewSymbols(registry *logsupport.Registry, allowed string) Rule {
 	return &Symbols{
-		allowed: allowed,
+		allowed:  allowed,
+		registry: registry,
 	}
 }
 
@@ -67,10 +70,10 @@ func (r *Symbols) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysis.
 	pkgPath, funcName, ok := utils.ResolveCallPackagePath(pass, call)
 	msgIndex := -1
 	if ok {
-		msgIndex = utils.MessageIndex(pkgPath, funcName)
+		msgIndex = r.registry.MessageIndex(pkgPath, funcName)
 	}
 
-	utils.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
+	r.registry.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
 		if isKey {
 			tv, ok := pass.TypesInfo.Types[arg]
 			if ok && tv.Value != nil && tv.Value.Kind() == constant.String {

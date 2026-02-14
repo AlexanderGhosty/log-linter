@@ -11,7 +11,7 @@ func TestSensitive_CustomPatterns(t *testing.T) {
 		`\d{4}-\d{4}-\d{4}-\d{4}`, // Simple CC pattern
 	}
 
-	r := NewSensitive(nil, patterns)
+	r := NewSensitive(nil, nil, patterns)
 
 	tests := []struct {
 		name     string
