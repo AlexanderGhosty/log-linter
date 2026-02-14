@@ -55,14 +55,15 @@ func (r *Registry) IsSupportedLogger(pkgPath, funcName string) bool {
 
 	for _, cfg := range r.configs {
 		if cfg.Package == pkgPath {
-			if cfg.UserType == "slog" {
+			switch cfg.UserType {
+			case "slog":
 				switch funcName {
 				case "Info", "Warn", "Error", "Debug", "Log":
 					return true
 				case "InfoContext", "WarnContext", "ErrorContext", "DebugContext", "LogAttrs":
 					return true
 				}
-			} else if cfg.UserType == "zap" {
+			case "zap":
 				switch funcName {
 				// Logger methods
 				case "Info", "Warn", "Error", "Debug", "Panic", "Fatal", "DPanic":
@@ -74,7 +75,7 @@ func (r *Registry) IsSupportedLogger(pkgPath, funcName string) bool {
 				case "Infow", "Warnw", "Errorw", "Debugw", "Panicw", "Fatalw", "DPanicw":
 					return true
 				}
-			} else {
+			default:
 				// For generic loggers, we might need more specific configuration
 				// For now, assume if the package matches, it's supported
 				return true

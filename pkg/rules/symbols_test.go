@@ -3,17 +3,19 @@ package rules
 import (
 	"go/token"
 	"testing"
+
+	"github.com/AlexanderGhosty/log-linter/pkg/logsupport"
 )
 
 func TestSymbols_Name(t *testing.T) {
-	r := NewSymbols(nil, "")
+	r := NewSymbols(logsupport.NewRegistry(nil), "")
 	if r.Name() != "symbols" {
 		t.Errorf("expected name 'symbols', got %q", r.Name())
 	}
 }
 
 func TestSymbols_Check(t *testing.T) {
-	r := NewSymbols(nil, "")
+	r := NewSymbols(logsupport.NewRegistry(nil), "")
 
 	tests := []struct {
 		name     string
@@ -57,7 +59,7 @@ func TestSymbols_Check(t *testing.T) {
 }
 
 func TestSymbols_SuggestedFix(t *testing.T) {
-	r := NewSymbols(nil, "")
+	r := NewSymbols(logsupport.NewRegistry(nil), "")
 	diags := r.Check("hello!🚀", token.NoPos, token.NoPos)
 
 	if len(diags) == 0 {

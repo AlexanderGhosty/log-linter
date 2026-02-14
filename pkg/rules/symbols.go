@@ -14,11 +14,15 @@ import (
 )
 
 type Symbols struct {
-	allowed  string
 	registry *logsupport.Registry
+	allowed  string
 }
 
 func NewSymbols(registry *logsupport.Registry, allowed string) Rule {
+	if registry == nil {
+		registry = logsupport.NewRegistry(nil)
+	}
+
 	return &Symbols{
 		allowed:  allowed,
 		registry: registry,

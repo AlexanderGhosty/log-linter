@@ -3,17 +3,19 @@ package rules
 import (
 	"go/token"
 	"testing"
+
+	"github.com/AlexanderGhosty/log-linter/pkg/logsupport"
 )
 
 func TestSensitive_Name(t *testing.T) {
-	r := NewSensitive(nil, nil, nil)
+	r := NewSensitive(logsupport.NewRegistry(nil), nil, nil)
 	if r.Name() != "sensitive" {
 		t.Errorf("expected name 'sensitive', got %q", r.Name())
 	}
 }
 
 func TestSensitive_Check(t *testing.T) {
-	r := NewSensitive(nil, nil, nil)
+	r := NewSensitive(logsupport.NewRegistry(nil), nil, nil)
 
 	tests := []struct {
 		name     string

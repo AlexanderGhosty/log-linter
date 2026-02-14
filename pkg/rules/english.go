@@ -16,6 +16,10 @@ type English struct {
 }
 
 func NewEnglish(registry *logsupport.Registry) Rule {
+	if registry == nil {
+		registry = logsupport.NewRegistry(nil)
+	}
+
 	return &English{
 		registry: registry,
 	}

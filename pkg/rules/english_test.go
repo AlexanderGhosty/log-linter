@@ -3,17 +3,19 @@ package rules
 import (
 	"go/token"
 	"testing"
+
+	"github.com/AlexanderGhosty/log-linter/pkg/logsupport"
 )
 
 func TestEnglish_Name(t *testing.T) {
-	r := NewEnglish(nil)
+	r := NewEnglish(logsupport.NewRegistry(nil))
 	if r.Name() != "english" {
 		t.Errorf("expected name 'english', got %q", r.Name())
 	}
 }
 
 func TestEnglish_Check(t *testing.T) {
-	r := NewEnglish(nil)
+	r := NewEnglish(logsupport.NewRegistry(nil))
 
 	tests := []struct {
 		name     string

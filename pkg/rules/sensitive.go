@@ -14,9 +14,9 @@ import (
 )
 
 type Sensitive struct {
+	registry *logsupport.Registry
 	keywords []string
 	patterns []*regexp.Regexp
-	registry *logsupport.Registry
 }
 
 func NewSensitive(registry *logsupport.Registry, keywords []string, patterns []string) Rule {
@@ -45,6 +45,10 @@ func NewSensitive(registry *logsupport.Registry, keywords []string, patterns []s
 		// If an invalid pattern reaches here, it's a configuration/initialization error.
 		re := regexp.MustCompile(p)
 		compiledPatterns = append(compiledPatterns, re)
+	}
+
+	if registry == nil {
+		registry = logsupport.NewRegistry(nil)
 	}
 
 	return &Sensitive{

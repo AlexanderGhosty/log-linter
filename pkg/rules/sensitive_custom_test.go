@@ -3,6 +3,8 @@ package rules
 import (
 	"go/token"
 	"testing"
+
+	"github.com/AlexanderGhosty/log-linter/pkg/logsupport"
 )
 
 func TestSensitive_CustomPatterns(t *testing.T) {
@@ -11,7 +13,7 @@ func TestSensitive_CustomPatterns(t *testing.T) {
 		`\d{4}-\d{4}-\d{4}-\d{4}`, // Simple CC pattern
 	}
 
-	r := NewSensitive(nil, nil, patterns)
+	r := NewSensitive(logsupport.NewRegistry(nil), nil, patterns)
 
 	tests := []struct {
 		name     string

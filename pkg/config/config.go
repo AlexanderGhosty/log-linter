@@ -41,8 +41,8 @@ type LoggerConfig struct {
 	Package string `mapstructure:"package"`
 	// Implementation type: "slog", "zap", "generic"
 	UserType string `mapstructure:"user_type"`
-	// Index of the message argument in the log call
-	MessageIndex int `mapstructure:"message_index"`
 	// Names of field constructors (e.g. "String", "Int")
 	FieldConstructors []string `mapstructure:"field_constructors"`
+	// Index of the message argument in the log call
+	MessageIndex int `mapstructure:"message_index"`
 }
