@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"sync"
+
 	"github.com/AlexanderGhosty/log-linter/pkg/logsupport"
 	"github.com/AlexanderGhosty/log-linter/pkg/utils"
 	"golang.org/x/tools/go/analysis"
@@ -17,13 +19,15 @@ import (
 // Sensitive checks for sensitive data in log messages.
 type Sensitive struct {
 	registry *logsupport.Registry
+	cache    map[string]bool
 	keywords []string
 	patterns []*regexp.Regexp
+	mu       sync.RWMutex
 }
 
 // NewSensitive creates a new Sensitive rule.
 func NewSensitive(registry *logsupport.Registry, keywords []string, patterns []string) Rule {
-	if len(keywords) == 0 {
+	if keywords == nil {
 		keywords = []string{
 			"password", "passwd", "secret", "token",
 			"api_key", "apikey", "access_key", "auth_token",
@@ -58,6 +62,7 @@ func NewSensitive(registry *logsupport.Registry, keywords []string, patterns []s
 		keywords: normalized,
 		patterns: compiledPatterns,
 		registry: registry,
+		cache:    make(map[string]bool),
 	}
 }
 
@@ -173,6 +178,30 @@ func checkOperand(expr ast.Expr, r *Sensitive, report func(token.Pos, token.Pos,
 }
 
 func (r *Sensitive) containsSensitiveInfo(s string) bool {
+	// Only verify short strings to avoid memory pressure on large blobs,
+	// but typically identifiers/keys are short.
+	if len(s) > 1024 {
+		return r.checkString(s)
+	}
+
+	r.mu.RLock()
+	res, ok := r.cache[s]
+	r.mu.RUnlock()
+
+	if ok {
+		return res
+	}
+
+	res = r.checkString(s)
+
+	r.mu.Lock()
+	r.cache[s] = res
+	r.mu.Unlock()
+
+	return res
+}
+
+func (r *Sensitive) checkString(s string) bool {
 	// Check regex patterns first (on original string)
 	for _, re := range r.patterns {
 		if re.MatchString(s) {

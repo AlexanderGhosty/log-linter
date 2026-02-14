@@ -16,7 +16,16 @@ type Registry struct {
 
 // NewRegistry creates a new Registry with the given matching configurations.
 func NewRegistry(customConfigs []config.LoggerConfig) *Registry {
-	// Start with defaults
+	// If custom configurations are provided (non-nil), use them exclusively.
+	// This allows users to disable default loggers by providing an empty list,
+	// or to define exactly the set of loggers they want.
+	if customConfigs != nil {
+		return &Registry{
+			configs: customConfigs,
+		}
+	}
+
+	// Otherwise, use defaults
 	defaults := []config.LoggerConfig{
 		{
 			Package:      "log/slog",
@@ -42,16 +51,14 @@ func NewRegistry(customConfigs []config.LoggerConfig) *Registry {
 	}
 
 	return &Registry{
-		configs: append(defaults, customConfigs...),
+		configs: defaults,
 	}
 }
 
 // IsSupportedLogger returns true if the package and function correspond to a supported logger.
 func (r *Registry) IsSupportedLogger(pkgPath, funcName string) bool {
 	// Remove vendor prefix for matching
-	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
-		pkgPath = pkgPath[i+len("/vendor/"):]
-	}
+	pkgPath = normalizeVendor(pkgPath)
 
 	for _, cfg := range r.configs {
 		if cfg.Package == pkgPath {
@@ -87,10 +94,7 @@ func (r *Registry) IsSupportedLogger(pkgPath, funcName string) bool {
 
 // MessageIndex returns the index of the log message argument.
 func (r *Registry) MessageIndex(pkgPath, funcName string) int {
-	cleanPkgPath := pkgPath
-	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
-		cleanPkgPath = pkgPath[i+len("/vendor/"):]
-	}
+	cleanPkgPath := normalizeVendor(pkgPath)
 
 	for _, cfg := range r.configs {
 		if cfg.Package == cleanPkgPath {
@@ -113,10 +117,7 @@ func (r *Registry) MessageIndex(pkgPath, funcName string) int {
 
 // IsFieldConstructor returns true if the function is a field constructor.
 func (r *Registry) IsFieldConstructor(pkgPath, funcName string) bool {
-	cleanPkgPath := pkgPath
-	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
-		cleanPkgPath = pkgPath[i+len("/vendor/"):]
-	}
+	cleanPkgPath := normalizeVendor(pkgPath)
 
 	for _, cfg := range r.configs {
 		if cfg.Package == cleanPkgPath {
@@ -138,10 +139,7 @@ func (r *Registry) InspectLogArgs(pass *analysis.Pass, call *ast.CallExpr, msgIn
 	}
 
 	// Determine UserType
-	cleanPkgPath := pkgPath
-	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
-		cleanPkgPath = pkgPath[i+len("/vendor/"):]
-	}
+	cleanPkgPath := normalizeVendor(pkgPath)
 
 	var userType string
 	for _, cfg := range r.configs {
@@ -189,4 +187,12 @@ func (r *Registry) InspectLogArgs(pass *analysis.Pass, call *ast.CallExpr, msgIn
 			fn(arg, isKey)
 		}
 	}
+}
+
+// normalizeVendor strips the vendor prefix from a package path if present.
+func normalizeVendor(pkgPath string) string {
+	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
+		return pkgPath[i+len("/vendor/"):]
+	}
+	return pkgPath
 }

@@ -64,6 +64,7 @@ func TestSensitive_Check(t *testing.T) {
 func TestSensitive_ContainsSensitiveInfo(t *testing.T) {
 	s := &Sensitive{
 		keywords: []string{"password", "token", "secret"},
+		cache:    make(map[string]bool),
 	}
 
 	tests := []struct {
@@ -87,5 +88,19 @@ func TestSensitive_ContainsSensitiveInfo(t *testing.T) {
 				t.Errorf("containsSensitiveInfo(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSensitive_DisableDefaults(t *testing.T) {
+	// Pass empty slice (not nil) to disable defaults
+	r := NewSensitive(logsupport.NewRegistry(nil), []string{}, nil).(*Sensitive)
+
+	// Check if default keywords are gone
+	if len(r.keywords) != 0 {
+		t.Errorf("Expected 0 keywords, got %d", len(r.keywords))
+	}
+
+	if r.containsSensitiveInfo("password") {
+		t.Error("Expected 'password' to be NOT sensitive when defaults are disabled")
 	}
 }

@@ -2,7 +2,6 @@ package utils
 
 import (
 	"go/ast"
-	"strings"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -31,19 +30,4 @@ func ResolveCallPackagePath(pass *analysis.Pass, call *ast.CallExpr) (string, st
 	}
 
 	return "", "", false
-}
-
-// NormalizeVendor strips the vendor prefix from a package path if present.
-// This is useful when analyzing code that vendors its dependencies, as the
-// package path might look like "github.com/org/repo/vendor/log/slog".
-//
-// Example:
-//
-//	NormalizeVendor("github.com/org/repo/vendor/log/slog") // returns "log/slog"
-//	NormalizeVendor("log/slog")                            // returns "log/slog"
-func NormalizeVendor(pkgPath string) string {
-	if i := strings.Index(pkgPath, "/vendor/"); i >= 0 {
-		return pkgPath[i+len("/vendor/"):]
-	}
-	return pkgPath
 }
