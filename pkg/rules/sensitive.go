@@ -1,3 +1,4 @@
+// Package rules defines the analysis rules for the log-linter.
 package rules
 
 import (
@@ -8,17 +9,25 @@ import (
 	"strconv"
 	"strings"
 
+	"sync"
+
+	"github.com/AlexanderGhosty/log-linter/pkg/logsupport"
 	"github.com/AlexanderGhosty/log-linter/pkg/utils"
 	"golang.org/x/tools/go/analysis"
 )
 
+// Sensitive checks for sensitive data in log messages.
 type Sensitive struct {
+	registry *logsupport.Registry
+	cache    map[string]bool
 	keywords []string
 	patterns []*regexp.Regexp
+	mu       sync.RWMutex
 }
 
-func NewSensitive(keywords []string, patterns []string) Rule {
-	if len(keywords) == 0 {
+// NewSensitive creates a new Sensitive rule.
+func NewSensitive(registry *logsupport.Registry, keywords []string, patterns []string) Rule {
+	if keywords == nil {
 		keywords = []string{
 			"password", "passwd", "secret", "token",
 			"api_key", "apikey", "access_key", "auth_token",
@@ -45,16 +54,24 @@ func NewSensitive(keywords []string, patterns []string) Rule {
 		compiledPatterns = append(compiledPatterns, re)
 	}
 
+	if registry == nil {
+		registry = logsupport.NewRegistry(nil)
+	}
+
 	return &Sensitive{
 		keywords: normalized,
 		patterns: compiledPatterns,
+		registry: registry,
+		cache:    make(map[string]bool),
 	}
 }
 
+// Name returns the name of the rule.
 func (r *Sensitive) Name() string {
 	return "sensitive"
 }
 
+// Check validates a single log message string.
 func (r *Sensitive) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	if r.containsSensitiveInfo(msg) {
 		return []analysis.Diagnostic{{
@@ -66,6 +83,7 @@ func (r *Sensitive) Check(msg string, pos, end token.Pos) []analysis.Diagnostic 
 	return nil
 }
 
+// CheckCall analyzes a full log call expression.
 func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysis.Diagnostic {
 	var diags []analysis.Diagnostic
 
@@ -82,7 +100,7 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 	pkgPath, funcName, ok := utils.ResolveCallPackagePath(pass, call)
 	msgIndex := -1
 	if ok {
-		msgIndex = utils.MessageIndex(pkgPath, funcName)
+		msgIndex = r.registry.MessageIndex(pkgPath, funcName)
 	}
 
 	// Check the message argument itself if it's NOT a constant string (concatenation etc.)
@@ -95,7 +113,7 @@ func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysi
 		}
 	}
 
-	utils.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
+	r.registry.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
 		if isKey {
 			// Check if key is a constant string
 			tv, ok := pass.TypesInfo.Types[arg]
@@ -160,6 +178,30 @@ func checkOperand(expr ast.Expr, r *Sensitive, report func(token.Pos, token.Pos,
 }
 
 func (r *Sensitive) containsSensitiveInfo(s string) bool {
+	// Only verify short strings to avoid memory pressure on large blobs,
+	// but typically identifiers/keys are short.
+	if len(s) > 1024 {
+		return r.checkString(s)
+	}
+
+	r.mu.RLock()
+	res, ok := r.cache[s]
+	r.mu.RUnlock()
+
+	if ok {
+		return res
+	}
+
+	res = r.checkString(s)
+
+	r.mu.Lock()
+	r.cache[s] = res
+	r.mu.Unlock()
+
+	return res
+}
+
+func (r *Sensitive) checkString(s string) bool {
 	// Check regex patterns first (on original string)
 	for _, re := range r.patterns {
 		if re.MatchString(s) {

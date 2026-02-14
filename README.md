@@ -110,6 +110,7 @@ You can configure the linter settings in your `.golangci.yml` under `linters-set
   e.g., "ssn", "credit_card").
 - **`sensitive.patterns`**: List of regex patterns to treat as sensitive (e.g., `^\d{3}-\d{2}-\d{4}$`).
 - **`symbols.allowed`**: String containing additional characters to allow in log messages (e.g., "@#").
+- **`loggers`**: List of custom logger definitions to support wrappers or other libraries.
 
 #### Example Configuration
 
@@ -126,9 +127,53 @@ linters-settings:
                patterns: [ "\\d{3}-\\d{2}-\\d{4}" ] # SSN regex example
             symbols:
                allowed: "@#"
+            loggers:
+               - package: "github.com/my/custom/log"
+                 user_type: "slog" # "slog" or "zap"
+                 message_index: 0
+                 field_constructors: [ "String", "Int" ]
+```
+
+#### Custom Loggers
+
+You can configure the linter to support custom logger wrappers or other logging libraries by adding entries to the
+`loggers` list.
+
+**Note on Precedence**: Custom logger configurations take precedence over built-in defaults. If you define a
+configuration for a package that is already supported by default (e.g., `log/slog`), your custom configuration will
+completely replace the default behavior for that package.
+
+```yaml
+loggers:
+  - package: "github.com/my/custom/log"
+    user_type: "generic" # "slog", "zap", or "generic"
+    message_index: 0
+    field_constructors: [ "String", "Int", "Data" ]
+```
+
+**Fields**:
+
+- `package`: The full import path of the logging package (e.g. `"github.com/my/custom/log"`).
+- `user_type`: Defines argument parsing style. `"slog"` expects key-values at odd indices. `"zap"` only allows
+  key-values for `w`-suffixed methods. `"generic"` is similar to slog but without special cases.
+- `message_index`: The 0-based index of the message argument (e.g. `0` for `Log(msg, kvs...)`, `1` for
+  `Log(ctx, msg, kvs...)`).
+- `field_constructors`: List of function names that create structured fields. The linter checks the first argument of
+  these functions for sensitive keys.
+
+**To Disable Defaults**: Provide an empty list `[]` to `loggers` to disable all logger support (including built-in
+defaults). Similarly, providing an empty list to `sensitive.keywords` will disable the default keyword checks.
+
+```yaml
+loggers: [ ] # Disables all loggers
+# or
+loggers:
+  - package: "github.com/my/custom/log"
+# ... replaces defaults with ONLY this logger
 ```
 
 ## Supported Loggers
 
+By default, the linter supports:
 - `log/slog`: `Info`, `Warn`, `Error`, `Debug`, `Log`, `LogAttrs`, and `*Context` variants.
 - `go.uber.org/zap`: `Info`, `Warn`, `Error`, `Debug`, `Fatal`, `Panic`, `DPanic`, and `*f`, `*w` variants.

@@ -6,20 +6,33 @@ import (
 	"go/token"
 	"unicode"
 
+	"github.com/AlexanderGhosty/log-linter/pkg/logsupport"
 	"github.com/AlexanderGhosty/log-linter/pkg/utils"
 	"golang.org/x/tools/go/analysis"
 )
 
-type English struct{}
-
-func NewEnglish() Rule {
-	return &English{}
+// English checks that log messages consist of ASCII characters.
+type English struct {
+	registry *logsupport.Registry
 }
 
+// NewEnglish creates a new English rule.
+func NewEnglish(registry *logsupport.Registry) Rule {
+	if registry == nil {
+		registry = logsupport.NewRegistry(nil)
+	}
+
+	return &English{
+		registry: registry,
+	}
+}
+
+// Name returns the name of the rule.
 func (r *English) Name() string {
 	return "english"
 }
 
+// Check validates a single log message string.
 func (r *English) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	const maxASCII = 127
 	for _, ch := range msg {
@@ -34,6 +47,7 @@ func (r *English) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	return nil
 }
 
+// CheckCall analyzes a full log call expression.
 func (r *English) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysis.Diagnostic {
 	var diags []analysis.Diagnostic
 
@@ -41,10 +55,10 @@ func (r *English) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysis.
 	pkgPath, funcName, ok := utils.ResolveCallPackagePath(pass, call)
 	msgIndex := -1
 	if ok {
-		msgIndex = utils.MessageIndex(pkgPath, funcName)
+		msgIndex = r.registry.MessageIndex(pkgPath, funcName)
 	}
 
-	utils.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
+	r.registry.InspectLogArgs(pass, call, msgIndex, func(arg ast.Expr, isKey bool) {
 		if isKey {
 			// Check if arg is a constant string
 			tv, ok := pass.TypesInfo.Types[arg]

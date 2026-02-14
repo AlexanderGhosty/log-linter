@@ -9,16 +9,20 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// Lowercase checks that log messages start with a lowercase letter.
 type Lowercase struct{}
 
+// NewLowercase creates a new Lowercase rule.
 func NewLowercase() Rule {
 	return &Lowercase{}
 }
 
+// Name returns the name of the rule.
 func (r *Lowercase) Name() string {
 	return "lowercase"
 }
 
+// Check validates a single log message string.
 func (r *Lowercase) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	if msg == "" {
 		return nil

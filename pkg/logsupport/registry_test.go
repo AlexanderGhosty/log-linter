@@ -1,8 +1,15 @@
-package utils
+package logsupport
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/AlexanderGhosty/log-linter/pkg/config"
+)
 
 func TestIsSupportedLogger(t *testing.T) {
+	// Use default registry
+	r := NewRegistry(nil)
+
 	tests := []struct {
 		name     string
 		pkgPath  string
@@ -54,7 +61,7 @@ func TestIsSupportedLogger(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := IsSupportedLogger(tt.pkgPath, tt.funcName)
+			got := r.IsSupportedLogger(tt.pkgPath, tt.funcName)
 			if got != tt.want {
 				t.Errorf("IsSupportedLogger(%q, %q) = %v, want %v", tt.pkgPath, tt.funcName, got, tt.want)
 			}
@@ -63,6 +70,8 @@ func TestIsSupportedLogger(t *testing.T) {
 }
 
 func TestIsFieldConstructor(t *testing.T) {
+	r := NewRegistry(nil)
+
 	tests := []struct {
 		name     string
 		pkgPath  string
@@ -104,7 +113,7 @@ func TestIsFieldConstructor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := IsFieldConstructor(tt.pkgPath, tt.funcName)
+			got := r.IsFieldConstructor(tt.pkgPath, tt.funcName)
 			if got != tt.want {
 				t.Errorf("IsFieldConstructor(%q, %q) = %v, want %v", tt.pkgPath, tt.funcName, got, tt.want)
 			}
@@ -113,6 +122,8 @@ func TestIsFieldConstructor(t *testing.T) {
 }
 
 func TestMessageIndex(t *testing.T) {
+	r := NewRegistry(nil)
+
 	tests := []struct {
 		name     string
 		pkgPath  string
@@ -142,10 +153,126 @@ func TestMessageIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := MessageIndex(tt.pkgPath, tt.funcName)
+			got := r.MessageIndex(tt.pkgPath, tt.funcName)
 			if got != tt.want {
 				t.Errorf("MessageIndex(%q, %q) = %v, want %v", tt.pkgPath, tt.funcName, got, tt.want)
 			}
 		})
 	}
+}
+
+func TestNewRegistry_Replace(t *testing.T) {
+	// Create a custom config that replaces defaults
+	custom := []config.LoggerConfig{
+		{
+			Package:      "log/slog",
+			UserType:     "generic",
+			MessageIndex: 5,
+		},
+	}
+
+	r := NewRegistry(custom)
+
+	// Check if MessageIndex reflects the custom config
+	idx := r.MessageIndex("log/slog", "Info")
+	if idx != 5 {
+		t.Errorf("Expected MessageIndex 5, got %d", idx)
+	}
+
+	// Check that default 'zap' is NO LONGER supported (replacement, not merge)
+	if r.IsSupportedLogger("go.uber.org/zap", "Info") {
+		t.Error("Expected zap support to be removed when custom config is provided")
+	}
+}
+
+func TestNewRegistry_DisableDefaults(t *testing.T) {
+	// Provide empty list to disable all loggers
+	custom := []config.LoggerConfig{}
+	r := NewRegistry(custom)
+
+	if r.IsSupportedLogger("log/slog", "Info") {
+		t.Error("Expected slog support to be disabled")
+	}
+	if r.IsSupportedLogger("go.uber.org/zap", "Info") {
+		t.Error("Expected zap support to be disabled")
+	}
+}
+
+// TestRegistry_ConfigParameters verifies the impact of each configuration field.
+func TestRegistry_ConfigParameters(t *testing.T) {
+	t.Run("Package Field Impact", func(t *testing.T) {
+		// Scenario: Custom logger package "my/pkg"
+		cfg := []config.LoggerConfig{
+			{Package: "my/pkg", UserType: "generic"},
+		}
+		r := NewRegistry(cfg)
+
+		// Verify "my/pkg" is recognized
+		if !r.IsSupportedLogger("my/pkg", "Info") {
+			t.Error("Expected 'my/pkg' to be supported")
+		}
+		// Verify "other/pkg" is NOT recognized
+		if r.IsSupportedLogger("other/pkg", "Info") {
+			t.Error("Expected 'other/pkg' to be unsupported")
+		}
+	})
+
+	t.Run("MessageIndex Field Impact", func(t *testing.T) {
+		// Scenario: Logger with message at index 1 (e.g. context first)
+		cfg := []config.LoggerConfig{
+			{Package: "my/pkg", UserType: "generic", MessageIndex: 1},
+		}
+		r := NewRegistry(cfg)
+
+		// Verify MessageIndex returns 1
+		idx := r.MessageIndex("my/pkg", "Info")
+		if idx != 1 {
+			t.Errorf("Expected MessageIndex 1, got %d", idx)
+		}
+	})
+
+	t.Run("FieldConstructors Field Impact", func(t *testing.T) {
+		// Scenario: Custom field constructor "Data"
+		cfg := []config.LoggerConfig{
+			{
+				Package:           "my/pkg",
+				UserType:          "generic",
+				FieldConstructors: []string{"Data", "Field"},
+			},
+		}
+		r := NewRegistry(cfg)
+
+		// Verify "Data" is recognized
+		if !r.IsFieldConstructor("my/pkg", "Data") {
+			t.Error("Expected 'Data' to be a field constructor")
+		}
+		// Verify "Other" is NOT recognized
+		if r.IsFieldConstructor("my/pkg", "Other") {
+			t.Error("Expected 'Other' NOT to be a field constructor")
+		}
+	})
+
+	t.Run("UserType Field Impact", func(t *testing.T) {
+		// Test: UserType determines which methods are supported/treated as logging
+		// "slog": supports "LogAttrs"
+		// "zap": supports "Infow" (sugared) but "Info" is structured (not key-value pairs)
+
+		cfgSlog := []config.LoggerConfig{{Package: "my/slog", UserType: "slog"}}
+		rSlog := NewRegistry(cfgSlog)
+
+		if !rSlog.IsSupportedLogger("my/slog", "LogAttrs") {
+			t.Error("UserType 'slog' should support LogAttrs")
+		}
+
+		cfgZap := []config.LoggerConfig{{Package: "my/zap", UserType: "zap"}}
+		rZap := NewRegistry(cfgZap)
+
+		if !rZap.IsSupportedLogger("my/zap", "Infow") {
+			t.Error("UserType 'zap' should support Infow")
+		}
+		// Zap doesn't have "LogAttrs"
+		if rZap.IsSupportedLogger("my/zap", "LogAttrs") {
+			t.Error("UserType 'zap' should NOT support LogAttrs")
+		}
+	})
 }
