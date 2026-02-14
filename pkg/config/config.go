@@ -1,3 +1,4 @@
+// Package config defines the configuration structure for the log-linter.
 package config
 
 import (
@@ -5,12 +6,14 @@ import (
 	"regexp"
 )
 
+// Config holds the main configuration for the linter.
 type Config struct {
 	Symbols   SymbolsConfig   `mapstructure:"symbols"`
 	Sensitive SensitiveConfig `mapstructure:"sensitive"`
 	Loggers   []LoggerConfig  `mapstructure:"loggers"`
 }
 
+// Validate checks the configuration for errors.
 func (c *Config) Validate() error {
 	if err := c.Sensitive.Validate(); err != nil {
 		return fmt.Errorf("sensitive config error: %w", err)
@@ -18,11 +21,13 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// SensitiveConfig holds configuration for sensitive data detection.
 type SensitiveConfig struct {
 	Keywords []string `mapstructure:"keywords"`
 	Patterns []string `mapstructure:"patterns"`
 }
 
+// Validate checks the sensitive configuration for errors.
 func (c *SensitiveConfig) Validate() error {
 	for _, p := range c.Patterns {
 		if _, err := regexp.Compile(p); err != nil {
@@ -32,10 +37,12 @@ func (c *SensitiveConfig) Validate() error {
 	return nil
 }
 
+// SymbolsConfig holds configuration for symbol restrictions.
 type SymbolsConfig struct {
 	Allowed string `mapstructure:"allowed"`
 }
 
+// LoggerConfig defines a custom logger configuration.
 type LoggerConfig struct {
 	// Package path of the logger (e.g. "log/slog", "go.uber.org/zap")
 	Package string `mapstructure:"package"`

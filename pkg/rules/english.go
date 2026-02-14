@@ -11,10 +11,12 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// English checks that log messages consist of ASCII characters.
 type English struct {
 	registry *logsupport.Registry
 }
 
+// NewEnglish creates a new English rule.
 func NewEnglish(registry *logsupport.Registry) Rule {
 	if registry == nil {
 		registry = logsupport.NewRegistry(nil)
@@ -25,10 +27,12 @@ func NewEnglish(registry *logsupport.Registry) Rule {
 	}
 }
 
+// Name returns the name of the rule.
 func (r *English) Name() string {
 	return "english"
 }
 
+// Check validates a single log message string.
 func (r *English) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	const maxASCII = 127
 	for _, ch := range msg {
@@ -43,6 +47,7 @@ func (r *English) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	return nil
 }
 
+// CheckCall analyzes a full log call expression.
 func (r *English) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysis.Diagnostic {
 	var diags []analysis.Diagnostic
 

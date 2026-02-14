@@ -1,3 +1,4 @@
+// Package rules defines the analysis rules for the log-linter.
 package rules
 
 import (
@@ -13,12 +14,14 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// Sensitive checks for sensitive data in log messages.
 type Sensitive struct {
 	registry *logsupport.Registry
 	keywords []string
 	patterns []*regexp.Regexp
 }
 
+// NewSensitive creates a new Sensitive rule.
 func NewSensitive(registry *logsupport.Registry, keywords []string, patterns []string) Rule {
 	if len(keywords) == 0 {
 		keywords = []string{
@@ -58,10 +61,12 @@ func NewSensitive(registry *logsupport.Registry, keywords []string, patterns []s
 	}
 }
 
+// Name returns the name of the rule.
 func (r *Sensitive) Name() string {
 	return "sensitive"
 }
 
+// Check validates a single log message string.
 func (r *Sensitive) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	if r.containsSensitiveInfo(msg) {
 		return []analysis.Diagnostic{{
@@ -73,6 +78,7 @@ func (r *Sensitive) Check(msg string, pos, end token.Pos) []analysis.Diagnostic 
 	return nil
 }
 
+// CheckCall analyzes a full log call expression.
 func (r *Sensitive) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysis.Diagnostic {
 	var diags []analysis.Diagnostic
 

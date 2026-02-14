@@ -151,9 +151,6 @@ func (r *Registry) InspectLogArgs(pass *analysis.Pass, call *ast.CallExpr, msgIn
 		}
 	}
 
-	// DEBUG PRINT
-	// fmt.Printf("InspectLogArgs: pkg=%s func=%s userType=%s msgIndex=%d args=%d\n", cleanPkgPath, funcName, userType, msgIndex, len(call.Args))
-
 	for i, arg := range call.Args {
 		if i <= msgIndex {
 			continue
@@ -163,9 +160,9 @@ func (r *Registry) InspectLogArgs(pass *analysis.Pass, call *ast.CallExpr, msgIn
 		if callExpr, ok := arg.(*ast.CallExpr); ok {
 			constructorPkg, constructorFunc, resolved := utils.ResolveCallPackagePath(pass, callExpr)
 			if resolved {
-				// fmt.Printf("  Arg %d is call: %s.%s\n", i, constructorPkg, constructorFunc)
+
 				if r.IsFieldConstructor(constructorPkg, constructorFunc) {
-					// fmt.Println("    -> IsFieldConstructor")
+
 					if len(callExpr.Args) > 0 {
 						// The first arg is the key
 						fn(callExpr.Args[0], true)
@@ -186,9 +183,9 @@ func (r *Registry) InspectLogArgs(pass *analysis.Pass, call *ast.CallExpr, msgIn
 
 		if isSlog || isZapSugared {
 			relativeIndex := i - msgIndex
-			// In key-value pairs, even indices (0, 2, ...) relative to start are keys
+			// In key-value pairs, odd indices (1, 3, ...) relative to message are keys
 			isKey := relativeIndex%2 == 1
-			// fmt.Printf("  Arg %d: relativeIndex=%d isKey=%v\n", i, relativeIndex, isKey)
+
 			fn(arg, isKey)
 		}
 	}

@@ -1,3 +1,4 @@
+// Package analyzer defines the loglinter Analyzer.
 package analyzer
 
 import (
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 )
 
+// New returns a new loglinter analyzer.
 func New(cfg *config.Config) *analysis.Analyzer {
 	if cfg == nil {
 		cfg = &config.Config{}

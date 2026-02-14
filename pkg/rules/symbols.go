@@ -13,11 +13,13 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// Symbols checks for disallowed symbols in log messages.
 type Symbols struct {
 	registry *logsupport.Registry
 	allowed  string
 }
 
+// NewSymbols creates a new Symbols rule.
 func NewSymbols(registry *logsupport.Registry, allowed string) Rule {
 	if registry == nil {
 		registry = logsupport.NewRegistry(nil)
@@ -29,10 +31,12 @@ func NewSymbols(registry *logsupport.Registry, allowed string) Rule {
 	}
 }
 
+// Name returns the name of the rule.
 func (r *Symbols) Name() string {
 	return "symbols"
 }
 
+// Check validates a single log message string.
 func (r *Symbols) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	var cleanMsg []rune
 	hasBadChars := false
@@ -67,6 +71,7 @@ func (r *Symbols) Check(msg string, pos, end token.Pos) []analysis.Diagnostic {
 	}}
 }
 
+// CheckCall analyzes a full log call expression.
 func (r *Symbols) CheckCall(call *ast.CallExpr, pass *analysis.Pass) []analysis.Diagnostic {
 	var diags []analysis.Diagnostic
 
